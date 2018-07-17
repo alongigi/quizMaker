@@ -1,167 +1,266 @@
 import os
 import re
-
-from Document import Document
-from Parser import Parser
+from collections import Counter, deque
+from datetime import datetime
 
 
 class ReadFile:
+
     def __init__(self):
-        self.text_tags = re.compile("\[.*]|<.*>")
+        self.contain_number = re.compile(".*\d.*")
+        self.redundant_signs = ["|", "@", "^", "!", "?", "*", ";", "'", "\\", '"', '&', ':', '(', ')', '+', '=', '÷',
+                                ']', '[', '\n', '\t', '#', ' %', '`', '}', '_']
+        self.months = {"january", "february", "march", "april", "may", "june", "july", "august", "september", "october",
+                       "november", "december", "jan", "feb", "mar", "apr", "jun", "jul", "aug", "sep", "oct", "nov",
+                       "dec"}
+        self.normal_date = re.compile("\d+/\d+|\d+/\d+/\d+")
 
-    def count_docs(self, path):
+    def parse(self, text):
         '''
-        return the count of the files in a given @path
+        parse text to terms
+        :param text: input text
+        :return: Counter of the terms in the text => {term: frequency-in-text}
         '''
-        path = path + "corpus/"
-        all_sub_folders = os.listdir(path)
-        return sum(map(lambda x: 1, all_sub_folders))
+        for sign in self.redundant_signs:
+            text = text.replace(sign, ' ')
+        text = text.replace(",", '')
+        text = text.replace(' .', ' ').replace('. ', ' ')
+        raw_terms = text.split(' ')
+        not_parsed_terms = self._parse_terms(raw_terms)
+        self._parse_terms(not_parsed_terms)
+        raw_terms.extend(not_parsed_terms)
+        raw_terms = list(
+            filter(lambda x: len(x) > 1 and x[0] not in {'.', '$', '/'}, raw_terms))
+        return raw_terms
 
-    def read_files(self, path, threshold=5):
+    def _parse_terms(self, raw_terms):
         '''
-        create an iterator of the files in the given path
-        :param path: files paths
-        :param threshold: the amount of files returned each iteration, batch limit
-        :return: iterator that returns batch of files
+        invoke parser rules on raw_terms, change the input list
+        :param raw_terms: terms splited by space
+        :return: terms that added form the parser rules and need to be parsed also, empty if there aren't any
         '''
-        path = path + "corpus/"
-        all_sub_folders = os.listdir(path)
-        docs = []
-        i = 1
-        for curr_folder in all_sub_folders:
-            msg = "Read file {0}/{1} : {2}".format(str(i), len(all_sub_folders), curr_folder)
-            print(msg)
-            i += 1
-            d = self.read_file_from_path(path, curr_folder)
-            docs.extend(d)
-            if i % threshold == 0:
-                yield docs
-                docs = []
-        yield docs
+        added_terms = deque()
+        self._parse_numbers(raw_terms, added_terms)
+        self._parse_dates(raw_terms)
+        self._remove_dot_from_terms(raw_terms)
+        self._parse_upper_case(raw_terms, added_terms)
+        self._parse_dash(raw_terms, added_terms)
+        return added_terms
 
-    def read_file_from_path(self, path, curr_folder):
-        if curr_folder.startswith("LA"):
-            d = self.read_docs_from_LA_file(path + curr_folder + "/" + curr_folder, curr_folder)
-        elif curr_folder.startswith("FB"):
-            d = self.read_docs_from_FB_file(path + curr_folder + "/" + curr_folder, curr_folder)
+    def _remove_dot_from_terms(self, raw_terms):
+        '''
+        remove dot in the end of terms
+        '''
+        for i, term in enumerate(raw_terms):
+            if len(term) > 0 and term[len(term) - 1] == '.':
+                raw_terms[i] = term[:-1]
+
+    def _parse_dash(self, raw_terms, added_terms):
+        '''
+        parse terms containing '-'
+        :param raw_terms: input terms, change the input
+        :param added_terms: fill with extra terms parsed from original terms
+        '''
+        for i, term in enumerate(raw_terms):
+            if '-' in term:
+                splited_terms = term.split('-')
+                raw_terms[i] = splited_terms[0]
+                if not self.contain_number.match(splited_terms[0]) and not self.contain_number.match(splited_terms[1]):
+                    added_terms.append((splited_terms[0] + ' ' + splited_terms[1]).lower())
+                [added_terms.append(t.lower()) for t in splited_terms[1:]]
+
+    def _parse_upper_case(self, raw_terms, added_terms):
+        '''
+        parse terms with starting with uppercase
+        :param raw_terms: input terms, change the input
+        :param added_terms: fill with extra terms parsed from original terms
+        '''
+        for i, term in enumerate(raw_terms):
+            if len(term) > 0 and term[0].isupper():
+                if i + 1 < len(raw_terms) and len(raw_terms[i + 1]) > 0 and raw_terms[i + 1][0].isupper():
+                    added_terms.append((term + ' ' + raw_terms[i + 1]).lower())
+                    raw_terms[i + 1] = raw_terms[i + 1].lower()
+                raw_terms[i] = term.lower()
+            else:
+                raw_terms[i] = term.lower()
+
+    def _parse_dates(self, raw_terms):
+        '''
+        parse term that are parts of a date
+        :param raw_terms: input terms, change the input
+        '''
+        for i, term in enumerate(raw_terms):
+            if term.lower() in self.months:
+                date = []
+                if i - 1 >= 0 and raw_terms[i - 1].replace('th', '').isdigit():
+                    date.append(raw_terms[i - 1].replace('th', ''))
+                    raw_terms[i - 1] = ''
+                date.append(term)
+                if i + 1 < len(raw_terms) and raw_terms[i + 1].replace('th', '').isdigit():
+                    date.append(raw_terms[i + 1].replace('th', ''))
+                    raw_terms[i + 1] = ''
+                if len(date) < 3 and i + 2 < len(raw_terms) and raw_terms[i + 2].isdigit():
+                    date.append(raw_terms[i + 2])
+                    raw_terms[i + 2] = ''
+                raw_terms[i] = self._parse_date(' '.join(date))
+
+    def _parse_numbers(self, raw_terms, added_terms):
+        '''
+        parse term containing numbers
+        :param raw_terms: input terms, change the input
+        :param added_terms: fill with extra terms parsed from original terms
+        '''
+        for i, term in enumerate(raw_terms):
+            if self.contain_number.match(term) and not term.isdigit():
+                try:
+                    if term.isdigit():
+                        continue
+                    elif '/' in term:
+                        if self.normal_date.match(term):
+                            raw_terms[i] = term
+                        else:
+                            [added_terms.append(term) for term in term.split('/')]
+                            raw_terms[i] = ''
+                    elif '$' in term:
+                        if re.match("\$\d+b.*|\$\d+\.\d+b.*", term):
+                            raw_terms[i] = (term[term.find("$") + 1:term.find("b")] + " dollar")
+                            added_terms.append("billion")
+                        elif re.match("\$\d+m.*|\$\d+\.\d+m.*", term):
+                            raw_terms[i] = (term[term.find("$") + 1:term.find("m")] + " dollar")
+                            added_terms.append("million")
+                        else:
+                            term = term[term.find("$") + 1:]
+                            term = term.replace('$', '')
+                            if '-' in term:
+                                res = term.split('-')
+                                raw_terms[i] = self._parse_number(res[0]) + " dollar"
+                                added_terms.append(res[1])
+                            else:
+                                raw_terms[i] = self._parse_number(term) + " dollar"
+                    elif '%' in term:
+                        raw_terms[i] = (self._parse_percentage(term, '%'))
+                    else:
+                        raw_terms[i] = self._parse_number(raw_terms[i])
+                except ValueError:
+                    pass
+            elif term.startswith('percent'):
+                if i - 1 >= 0 and self._is_number(raw_terms[i - 1]):
+                    raw_terms[i] = raw_terms[i - 1] + ' percent'
+                    raw_terms[i - 1] = ''
+        return added_terms
+
+    def _parse_percentage(self, term, type):
+        '''
+        parse term that represent percentage
+        :param term: term
+        :param type: can be {%, percent, percentage}
+        :return: the parsed term
+        '''
+        return self._parse_number(term.replace(type, '')) + ' percent'
+
+    def _parse_number(self, token):
+        '''
+        parse term that represent number
+        :return: the parsed term
+        '''
+        return self._parse_float(float(token))
+
+    def _parse_date(self, token):
+        '''
+        parse term as parsed date at format dd/mm/yyyy or dd/mm or mm/yyyy
+        :return: the date term
+        '''
+        try:
+            if '/' in token:
+                return token
+            token = token.replace('th', '')
+            return self._parse_day_month_year_date(token)
+        except Exception:
+            return token
+
+    def _parse_day_month_year_date(self, token):
+        '''
+        parse string containing day month year
+        '''
+        input_format = ''
+        output_format = ''
+        date = token.split(' ')
+        if self._is_number(date[0]):
+            input_format, output_format = self._day_first(date, input_format, output_format)
         else:
-            d = self.read_docs_from_FT_file(path + curr_folder + "/" + curr_folder, curr_folder)
-        return d
+            input_format, output_format = self._month_first(date, input_format, output_format)
+        if len(date) > 2:
+            year = date[2]
+            input_format, output_format = self._year_last(year, input_format, output_format)
 
-    def read_docs_from_FB_file(self, file_path, file_name):
-        '''
-        read FB file type
-        :param file_name:
-        '''
-        return self.read_from_file(self.remove_language_artical_type_rows, file_path, file_name)
+        return self._parse_date_by_format(token, input_format, output_format)
 
-    def read_docs_from_FT_file(self, file_path, file_name):
+    def _month_first(self, date, input_format, output_format):
         '''
-        read FT file type
-        :param file_name:
+        parse date when month appear first
         '''
-        return self.read_from_file(self.remove_redundant_signs, file_path, file_name)
-
-    def read_docs_from_LA_file(self, file_path, file_name):
-        '''
-        read LA file type
-        :param file_name:
-        '''
-        return self.read_from_file(self.remove_redundant_signs, file_path, file_name)
-
-    def read_from_file(self, clean_fn, file_path, file_name):
-        '''
-        create documents from file
-        :param file_name:
-        :param clean_fn: function for cleaning the text of the doc
-        :param file_path: the path of the file
-        :return: the documents from the file
-        '''
-        docs = []
-        if not os.path.exists(file_path):
-            return docs
-        file = open(file_path, 'r')
-        file_text = file.read()
-        file_text = file_text
-        raw_docs = file_text.split("</DOC>\n")
-        for raw_doc in raw_docs:
-            doc = self.create_doc_from_raw(raw_doc, file_name)
-            if doc is not None:
-                doc = clean_fn(doc)
-                docs.append(doc)
-        file.close()
-        return docs
-
-    def create_doc_from_raw(self, raw_doc, file_name):
-        '''
-        take raw document and convert it to Document object
-        :param file_name:
-        :param raw_doc:
-        :return:
-        '''
-        d = Document()
-        s_doc_id = raw_doc.find("<DOCNO>")
-        e_doc_id = raw_doc.find("</DOCNO>", s_doc_id + len("<DOCNO>"))
-        doc_id = raw_doc[s_doc_id + len("<DOCNO>"):e_doc_id].strip()
-        d.id = doc_id
-
-        s_doc_text = raw_doc.find("<TEXT>", e_doc_id + len("</DOCNO>"))
-        e_doc_text = raw_doc.find("</TEXT>", s_doc_text + len("<TEXT>"))
-        if s_doc_text == -1:
-            return None
-        d.text = raw_doc[s_doc_text + len("<TEXT>"): e_doc_text].strip()
-        d.file_name = file_name
-        return d
-
-    def remove_language_artical_type_rows(self, doc):
-        '''
-        remove the "Language:" row and "Artical:" row from document text
-        :param doc: document
-        :return: clean document
-        '''
-        text = self.text_tags.sub('', doc.text)
-        text_rows = text.split("\n")
-        if text_rows[0].startswith("Language:") and text_rows[1].startswith("Article Type:"):
-            text_rows = text_rows[2:]
-            doc.text = "\n".join(text_rows)
+        month = date[0]
+        output_format += '%m'
+        if len(month) > 3:
+            input_format += '%B'
         else:
-            doc.text = text
-        doc.text = doc.text.strip()
-        return doc
+            input_format += '%b'
+        if len(date[1]) <= 2 and int(date[1]) <= 31:
+            input_format += ' %d'
+            output_format = "%d/" + output_format
+        else:
+            year = date[1]
+            input_format, output_format = self._year_last(year, input_format, output_format)
+        return input_format, output_format
 
-    def remove_redundant_signs(self, doc):
+    def _year_last(self, year, input_format, output_format):
         '''
-        remove tags from document text
-        :param doc: document
-        :return: clean document
+        parse date when year appear last
         '''
-        doc.text = self.text_tags.sub('', doc.text)
-        return doc
+        output_format += "/%Y"
+        if len(year) <= 2:
+            input_format += ' %y'
+        else:
+            input_format += ' %Y'
+        return input_format, output_format
 
-    def read_query_file(self, query_file):
+    def _day_first(self, date, input_format, output_format):
         '''
-        read query file
-        :param query_file: the query file
-        :return: the queries in file
+        parse date when day appear first
         '''
-        f = open(query_file, 'r')
-        text = f.read()
-        queries = {}
-        raw_queries = text.split('</top>')[:-1]
-        for raw_query in raw_queries:
-            num = int(self.getDataFromTag(raw_query, "<num> Number:").strip())
-            query = self.getDataFromTag(raw_query, "<title>").strip()
-            queries[query] = num
+        input_format += '%d'
+        output_format += '%d/%m'
+        month = date[1]
+        if len(month) > 3:
+            input_format += ' %B'
+        else:
+            input_format += ' %b'
+        return input_format, output_format
 
-        return queries
+    def _parse_date_by_format(self, token, input_format, output_format):
+        '''
+        parse token in the input format to token in the output format
+        '''
+        return datetime.strptime(token, input_format).strftime(output_format)
 
-    def getDataFromTag(self, raw_query, tag):
-        """
-        Extract data from tag
-        :param raw_query: the text (xml)
-        :param tag: tag name
-        :return: data inside the tag
-        """
-        s = raw_query.find(tag) + len(tag)
-        e = raw_query.find("\n", s)
-        return raw_query[s: e]
+    def _parse_float(self, f):
+        '''
+        parse string that represent float
+        :return: the float fix with 2 digits after the floating point
+        '''
+        frac_result = str(format(f, ".2f"))
+        return frac_result.replace('.00', '')
+
+    def _is_month(self, raw_term):
+        '''
+        :return: True if input term is a month name
+        '''
+        return raw_term.lower() in self.months
+
+    def _is_number(self, raw_term):
+        '''
+        :return: True if intup term is a number
+        '''
+        if raw_term.replace('.', '').isdigit():
+            return True
+        return False
