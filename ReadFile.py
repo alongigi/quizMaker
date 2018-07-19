@@ -23,14 +23,14 @@ class ReadFile:
         '''
         for sign in self.redundant_signs:
             text = text.replace(sign, ' ')
-        text = text.replace(",", '')
-        text = text.replace(' .', ' ').replace('. ', ' ')
+        text = text.replace(",", ' , ')
+        text = text.replace(' .', ' . ').replace('. ', ' . ')
         raw_terms = text.split(' ')
         not_parsed_terms = self._parse_terms(raw_terms)
         self._parse_terms(not_parsed_terms)
         raw_terms.extend(not_parsed_terms)
         raw_terms = list(
-            filter(lambda x: len(x) > 1 and x[0] not in {'.', '$', '/'}, raw_terms))
+            filter(lambda x: len(x) >= 1 and x[0] not in {'$', '/'}, raw_terms))
         return raw_terms
 
     def _parse_terms(self, raw_terms):
@@ -42,7 +42,7 @@ class ReadFile:
         added_terms = deque()
         self._parse_numbers(raw_terms, added_terms)
         self._parse_dates(raw_terms)
-        self._remove_dot_from_terms(raw_terms)
+        #self._remove_dot_from_terms(raw_terms)
         self._parse_upper_case(raw_terms, added_terms)
         self._parse_dash(raw_terms, added_terms)
         return added_terms
