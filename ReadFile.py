@@ -43,7 +43,7 @@ class ReadFile:
         self._parse_numbers(raw_terms, added_terms)
         self._parse_dates(raw_terms)
         #self._remove_dot_from_terms(raw_terms)
-        self._parse_upper_case(raw_terms, added_terms)
+        #self._parse_upper_case(raw_terms, added_terms)
         self._parse_dash(raw_terms, added_terms)
         return added_terms
 

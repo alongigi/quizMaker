@@ -1,3 +1,4 @@
+import random
 import re
 
 
@@ -7,6 +8,9 @@ class CreateQuestions:
         self.when_questions(text, questions)
         self.how_much_questions(text, questions)
         self.where_questions(text, questions)
+        for key, value in questions.items():
+            random.shuffle(value)
+
         return questions
 
     def when_questions(self, text, questions):
@@ -19,7 +23,10 @@ class CreateQuestions:
                     j = j-1
                 t = "When does " + t
                 if len(t.split()) > 5:
-                    questions[t] = text[i]
+                    answer = int(text[i])
+                    questions[t] = [answer, answer+random.randrange(-10, 10),
+                                    answer+random.randrange(-10, 10),
+                                    answer+random.randrange(-10, 10)]
                 else:
                     j = i + 1
                     t = "When does"
@@ -28,7 +35,10 @@ class CreateQuestions:
                         j = j + 1
                     t = t + " ?"
                     if len(t.split()) > 5:
-                        questions[t] = text[i]
+                        answer = int(text[i])
+                        questions[t] = [answer, answer + random.randrange(-10, 10),
+                                        answer + random.randrange(-10, 10),
+                                        answer + random.randrange(-10, 10)]
 
     def how_much_questions(self, text, questions):
         for i, x in enumerate(text):
@@ -40,7 +50,10 @@ class CreateQuestions:
                     j = j-1
                 t = "How much does " + t
                 if len(t.split()) > 5:
-                    questions[t] = text[i]
+                    answer = int(text[i])
+                    questions[t] = [answer, answer + random.randrange(-10, 10),
+                                    answer + random.randrange(-10, 10),
+                                    answer + random.randrange(-10, 10)]
                 else:
                     j = i + 1
                     t = "How much does"
@@ -49,7 +62,10 @@ class CreateQuestions:
                         j = j + 1
                     t = t + " ?"
                     if len(t.split()) > 5:
-                        questions[t] = text[i]
+                        answer = int(text[i])
+                        questions[t] = [answer, answer + random.randrange(-10, 10),
+                                        answer + random.randrange(-10, 10),
+                                        answer + random.randrange(-10, 10)]
 
     def where_questions(self, text, questions):
         for i, x in enumerate(text):
