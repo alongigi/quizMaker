@@ -1,6 +1,9 @@
 from CreateQuestions import CreateQuestions
 from ReadFile import ReadFile
+from View import View
 
+v = View()
+v.start()
 readfile = ReadFile()
 createQuestions = CreateQuestions()
 file = open("./text.txt", 'r')
