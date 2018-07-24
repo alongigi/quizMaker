@@ -13,7 +13,6 @@ class View:
         self.to_stem = False
         self.to_sum = False
         self.to_expand = False
-        self.stem_checkbutton = Checkbutton(self.root, text="stemming")
         self.extension_checkbutton = Checkbutton(self.root, text="Extension of query")
         self.summarize_checkbutton = Checkbutton(self.root, text="Summarize document")
         self.progress_bar = Progressbar(self.root, orient=HORIZONTAL, length=200, mode='determinate')
@@ -21,10 +20,8 @@ class View:
         self.run_query = Button(text="Run", fg="blue")
         self.reset_btn = Button(text="Reset process", fg="red")
         self.dictionary_btn = Button(text="Show dictionary", fg="red")
-        self.cache_btn = Button(text="Show cache", fg="red")
-        self.save_btn = Button(text="Save dictionary and cache")
-        self.upload_btn = Button(text="Upload dictionary and cache")
-        self.show_summary = Button(text="Show summary")
+        self.save_btn = Button(text="Save dictionary")
+        self.upload_btn = Button(text="Upload dictionary")
         self.status_bar = Label(self.root)
         self.status_bar_text = StringVar()
         self.status_bar['textvariable'] = self.status_bar_text
@@ -53,13 +50,9 @@ class View:
         self.start_btn.grid(row=5, column=1)
         self.reset_btn.grid(row=6, column=0)
         self.reset_btn['state'] = 'disabled'
-        self.cache_btn.grid(row=6, column=1)
         self.dictionary_btn.grid(row=6, column=2)
-        self.show_summary.grid(row=7, column=0)
-        self.show_summary['state'] = 'disabled'
         self.save_btn.grid(row=7, column=1)
         self.upload_btn.grid(row=7, column=2)
-        self.stem_checkbutton.grid(row=5, column=0)
         self.status_bar.grid(row=8, column=0, columnspan=3, sticky=W)
         self.progress_bar.grid(row=9, column=0, columnspan=3, sticky=(W, E))
 
