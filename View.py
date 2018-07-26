@@ -43,7 +43,7 @@ class View:
         theme_label = Label(self.root, text="Quiz Maker", bg="blue", fg="white")
         theme_label.grid(row=0, column=1)
         doc_label = Label(self.root, text="File for creating quiz")
-        docs_btn = Button(self.root, text="browse")
+        docs_btn = Button(self.root, text="browse", command=self.get_path())
         doc_label.grid(row=1, sticky=E)
         self.docs_entry.grid(row=1, column=1)
         docs_btn.grid(row=1, column=2)
@@ -55,5 +55,8 @@ class View:
         self.upload_btn.grid(row=7, column=2)
         self.status_bar.grid(row=8, column=0, columnspan=3, sticky=W)
         self.progress_bar.grid(row=9, column=0, columnspan=3, sticky=(W, E))
+
+    def get_path(self):
+        file_path = filedialog.askdirectory()
 
 
