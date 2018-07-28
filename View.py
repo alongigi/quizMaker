@@ -3,8 +3,8 @@ from tkinter.ttk import Treeview, Progressbar
 
 
 class View:
-    def __init__(self):
-        #self.controller = controller
+    def __init__(self, controller):
+        self.controller = controller
         #self.controller.set_observer(self)
         self.root = Tk()
         self.root.title("Quiz Maker By: Alon Gigi")
@@ -57,6 +57,10 @@ class View:
         self.progress_bar.grid(row=9, column=0, columnspan=3, sticky=(W, E))
 
     def get_path(self):
+        pass
         file_path = filedialog.askdirectory()
+        self.controller.doc_path = file_path
+        self.docs_entry.delete(0, len(self.docs_entry.get()))
+        self.docs_entry.insert(0, file_path)
 
 

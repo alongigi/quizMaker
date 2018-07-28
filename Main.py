@@ -1,7 +1,9 @@
+from Controller import Controller
 from CreateQuestions import CreateQuestions
 from ReadFile import ReadFile
 from View import View
 
+c = Controller()
 v = View()
 v.start()
 readfile = ReadFile()
