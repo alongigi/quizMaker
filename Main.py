@@ -4,7 +4,7 @@ from ReadFile import ReadFile
 from View import View
 
 c = Controller()
-v = View()
+v = View(c)
 v.start()
 readfile = ReadFile()
 createQuestions = CreateQuestions()

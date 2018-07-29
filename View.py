@@ -1,4 +1,5 @@
 from tkinter import *
+from tkinter import filedialog
 from tkinter.ttk import Treeview, Progressbar
 
 
@@ -43,7 +44,7 @@ class View:
         theme_label = Label(self.root, text="Quiz Maker", bg="blue", fg="white")
         theme_label.grid(row=0, column=1)
         doc_label = Label(self.root, text="File for creating quiz")
-        docs_btn = Button(self.root, text="browse", command=self.get_path())
+        docs_btn = Button(self.root, text="browse", command=self.get_path)
         doc_label.grid(row=1, sticky=E)
         self.docs_entry.grid(row=1, column=1)
         docs_btn.grid(row=1, column=2)
@@ -57,10 +58,7 @@ class View:
         self.progress_bar.grid(row=9, column=0, columnspan=3, sticky=(W, E))
 
     def get_path(self):
-        pass
         file_path = filedialog.askdirectory()
         self.controller.doc_path = file_path
         self.docs_entry.delete(0, len(self.docs_entry.get()))
         self.docs_entry.insert(0, file_path)
-
-
